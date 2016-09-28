@@ -57,7 +57,7 @@
                         </div>
                     </div>
                     <div class='box-body' style='display: none;'>
-                        {{ $formResult->exportSectionToHTML($form, $section, $qbyq, $candidate) }}
+                        {{ $formResult->exportSectionToHTML($form, $section, $candidate) }}
                     </div>
                     <div class="box-footer"></div><!-- /.box-footer-->
                 </div><!-- /.box -->
@@ -100,31 +100,7 @@
 
     $('.btn-click-action').on('click', btnClassClick);
 
-    var unselect57 = function(e){
-        $('#Q57_checkbox').prop('checked', false);
-    }
-
-    $("#Q57_checkbox").click(function(){
-        if($("#Q57_checkbox").is(':checked') ){
-            $(".Q57 > option").prop("selected","selected");// Select All Options
-            $(".Q57").trigger("change");// Trigger change to select 2
-        }
-    });
-
-    $('.Q57').on('select2:unselect', unselect57);
-
-    $("#Q62_checkbox").click(function(){
-        if($("#Q62_checkbox").is(':checked') ){
-            $(".Q62 > option").prop("selected","selected");// Select All Options
-            $(".Q62").trigger("change");// Trigger change to select 2
-        }
-    });
-
-    var unselect62 = function(e){
-        $('#Q62_checkbox').prop('checked', false);
-    }
-
-    $('.Q62').on('select2:unselect', unselect62);
+    
 
 </script>
 @endsection

@@ -197,10 +197,9 @@ class CandidateController
         $candidate->set($label, $value);
     }
 
-    public function populateFromRequest($candidate, $req, $c2, $formResult) {
+    public function populateFromRequest($candidate, $req, $formResult) {
         //we have an existing formResult for this person - let's use that
         //to set up the keys for the candidate - that has been debugged
-        //that candidate is $c2
         $refs = [];
         $cos = [];
         $address = [];
@@ -362,11 +361,6 @@ class CandidateController
                 }
             } else if ($candidate->validField($key)) {
 
-                if ($key =="customTextBlock2") {
-                    //block Q65 values from going back to Bullhorn
-                    continue;
-                }
-
                 $previous = $candidate->get($key);
 
                 $qmaps = $formResult->findByBullhorn($key);
@@ -451,13 +445,6 @@ class CandidateController
                     }
 
                     $rhash[$val] = 1;
-                    //now for customText20 specific stuff:
-                    if ($jointkey == 'customText20*Expected_Local_Gross_Salary') {
-                        $pt1 = $val;
-                    }
-                    if ($jointkey == 'customText20*Expected_Local_Salary_Currency') {
-                        $pt2 = $val;
-                    }
 
                 }
                 //$previous is what is returned from the loaded candidate on a 'get' call
@@ -485,51 +472,8 @@ class CandidateController
                     }
                 }
                 $value = implode(", ", array_keys($final));
-
-                if ($key == "customFloat2") {
-                    $this->log_debug("Stripping trailing % from $value");
-                    $value = substr($value, 0, strlen($value)-2);
-                }
-                if ($key == "disability") {
-                    switch($value) {
-                        case "yes":
-                            $value = "Y";
-                            break;
-                        case "no":
-                            $value = "N";
-                            break;
-                        default:
-                            $value = "U";
-                    }
-                }
-                if ($key == 'referredBy') {
-                    $value2 = $value;
-                    //convert shortened FIFO/residential codes to longer versions
-                    //needs to be
-                    //International FIFO, International Residential, National FIFO, National Residential.
-                    $value2 = preg_replace("/Inter-FIFO/", "International FIFO", $value2);
-                    $value2 = preg_replace("/Inter-Res/", "International Residential", $value2);
-                    $value2 = preg_replace("/National-FIFO/", "National FIFO", $value2);
-                    $value2 = preg_replace("/National-Res/", "National Residential", $value2);
-                    if (strlen($value2)<=50) {
-                        $value = $value2;
-                    }
-                }
-                if ($key == 'customText19') {
-                    $value2 = $value;
-                    $value2 = preg_replace("/Equipment Supplier/", "Equipment Sup.", $value2);
-                    $value2 = preg_replace("|PE / IB / Trading|","PE/IB", $value2);
-                    $value2 = preg_replace("|Other|","Oth", $value2);
-                    $value2 = preg_replace("/Owner \((.*?)\)/", '$1', $value2);
-                    $value = $value2;
-                }
-                if ($key == 'customText20' && $pt1 && $pt2) {
-        			$value = $pt1.' ('.$pt2.')';
-                    $candidate->set($key, $value);
-        		} else {
-                    $this->log_debug("setting $key to $value");
-                    $this->assign($candidate, $key, $value, ", ");
-                }
+                $this->log_debug("setting $key to $value");
+                $this->assign($candidate, $key, $value, ", ");
             } else {
                 $this->log_debug("Invalid Field: $key");
                 $this->var_debug($values);
@@ -538,11 +482,6 @@ class CandidateController
         $this->loadReferencesFromRequest($candidate, $refs);
         $this->loadCustomObjectFromRequest($candidate, $cos);
         $this->loadAddressesFromRequest($candidate, $address, $address2);
-        $this->loadNoteFromRequest($candidate, $note);
-        $co1 = $candidate->get("customObject1s");
-        $mtpa = $co1->get("int1");
-        $candidate->set("customText15", $mtpa);
-        $this->log_debug("Just copied $mtpa from customobject1.int1 to customText15");
 
         return $candidate;
     }
@@ -613,21 +552,6 @@ class CandidateController
                     }
         $candidate->set("address", $add1);
         $candidate->set("secondaryAddress", $add2);
-    }
-
-    private function loadNoteFromRequest($candidate, $note) {
-        $existing = $candidate->get("Note");
-        $newNote = [];
-        $comment = "";
-        if ($existing) {
-            $comment = $existing["comments"];
-        }
-        foreach ($note as $noteDetail) {
-            $comment .= $noteDetail."\n";
-        }
-        $newNote["comments"] = $comment;
-        $newNote["action"] = "Conversion Interview";
-        $candidate->set("Note", $newNote);
     }
 
     private function loadCustomObjectFromRequest($candidate, $cos) {

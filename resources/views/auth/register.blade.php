@@ -4,8 +4,8 @@
     <div class="login-box">
         <div class="login-logo">
             <!--a href="/"><img src="{{asset('/images/logo.png')}}"></a -->
-            <a href="/"><img src="{{asset('/images/k8408177.jpg')}}"><br>
-            <h2 style="color:purple"><b>Plum</b>Integration</h2></a>
+            <a href="/"><img src="{{asset('/images/brick-clay.jpg')}}"><br>
+            <h2 style="color:#993300"><b>Brix</b> Job Search Prototype</h2></a>
         </div>
         <!-- /.login-logo -->
         <div class="login-box-body">

@@ -50,7 +50,7 @@ class ModelObject
 			$result .= ': '.$str;
 			$this->_logger->debug($result);
 		} else {  //no logger configured
-			\Log::debug( $str);
+			\Log::debug($str);
 		}
 	}
 

@@ -183,11 +183,11 @@ class BullhornController {
 		if (array_key_exists("changedEntityId", $retval)) {
 			//we have a successful submission
 			$this->submit_references($candidate);
-			$this->submit_custom_object($candidate);
-            $bullhornClient->submit_skills($candidate);
-			$bullhornClient->submit_categories($candidate);
-			$bullhornClient->submit_specialties($candidate);
-			$bullhornClient->submit_note($candidate);
+			//$this->submit_custom_object($candidate);
+            //$bullhornClient->submit_skills($candidate);
+			//$bullhornClient->submit_categories($candidate);
+			//$bullhornClient->submit_specialties($candidate);
+			//$bullhornClient->submit_note($candidate);
 		}
 		//returns an array with 'error' or 'id' and other data
 		return $retval;
@@ -613,6 +613,7 @@ class BullhornController {
 		$this->log_debug("looking up candidate references");
 		$ref_data = $bullhornClient->find_candidate_references($candidate); //an array of ref data (if exists)
 		foreach ($references as $reference) {
+			$reference->dump();
 			$ref_fname = $reference->get("referenceFirstName");
 			$ref_lname = $reference->get("referenceLastName");
 			$found = false;

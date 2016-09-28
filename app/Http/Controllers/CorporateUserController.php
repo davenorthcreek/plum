@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use \Stratum\Controller\BullhornController;
+use \App\Http\Controllers\FormResponseController;
 use \Stratum\Model\Candidate;
 use \Stratum\Model\CorporateUser;
+use App\Prospect;
 use Log;
 use Cache;
 use Auth;
@@ -16,15 +18,28 @@ use Auth;
 class CorporateUserController extends Controller
 {
   public function index() {
+      $frc = new FormResponseController();
+      return $frc->index(0);
+
+      /***
       $candidates = $this->load_candidates();
-      //$candidates = $cuser->getAssocCandidates();
-      $data['candidates'] = $candidates;
-      return view('admin_template')->with($data);
+      $data['candidates'] = array();
+      $prospect = new \App\Prospect();
+      $cuser = $this->loadCorporateUser();
+      $candidate = new Candidate();
+      $candidate->set("owner", $cuser->get("id"));
+      $candidate->set("id", 0);
+      $data['candidate'] = $candidate;
+      return view('formresponse')->with($data);
+      ***/
   }
 
   public function load_candidates() {
       $candidates = null;
       $cuser = $this->loadCorporateUser();
+      if ($cuser->get("id")==0) {
+          return array();
+      }
       $candidates = $cuser->getAssocCandidates();
       if (!$candidates) {
           Log::debug("Finding associated candidates");
@@ -70,6 +85,13 @@ class CorporateUserController extends Controller
       $id = $user->bullhorn_id;
       Log::debug("User has ID ".$id);
       $cuser = null;
+      if ($id == 0) {
+          if (Cache::has("user".$id)) {
+              Log::debug("Loading corporate user from cache: ".$id);
+              $cuser = Cache::get("user".$id);
+              return $cuser;
+          }
+      }
       if (!$id) {
           //load by name
           $name = $user->name;
@@ -81,6 +103,7 @@ class CorporateUserController extends Controller
               $user->bullhorn_id=$theId;
               $user->save();
           }
+          Cache::add("user".$theId, $cuser, 60);
       } else {
           //we have a bullhorn id
           $cuser = null;
@@ -94,6 +117,11 @@ class CorporateUserController extends Controller
               $bc = new BullhornController();
               $cuser = $bc->loadCorporateUser($cuser);
           }
+      }
+      if ($user->bullhorn_id==0) {
+          $cuser = new \Stratum\Model\CorporateUser();
+          $cuser->setName($user->name);
+          $cuser->set("id", 0);
       }
       return $cuser;
   }

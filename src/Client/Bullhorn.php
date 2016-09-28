@@ -16,8 +16,7 @@
 use \OAuth\Common\Storage\Session;
 use \OAuth\Common\Consumer\Credentials;
 use \Stratum\OAuth\OAuth2\Service\BullhornService;
-use \Illuminate\Support\Facades\Storage as Storage;
-use Illuminate\Support\Facades\Log as Log;
+use Log;
 
 namespace Stratum\Client;
 class Bullhorn {
@@ -82,8 +81,8 @@ class Bullhorn {
 
 		// Session storage
 		$storage = new \OAuth\Common\Storage\Session(false);
+		$cred_string = file_get_contents(base_path()."/storage/app/credentials.json");
 
-		$cred_string = \Storage::get("credentials.json");
 		//$this->log_debug($cred_string."");
 		$servicesCredentials = json_decode($cred_string, true);
 		//$this->var_debug($servicesCredentials);
@@ -112,6 +111,7 @@ class Bullhorn {
 		/** @var $bullhornService Bullhorn */
 		$this->log_debug("Creating new BullhornService");
 		$bullhornService = new \Stratum\OAuth\OAuth2\Service\BullhornService($credentials, $httpClient, $storage, array());
+		$bullhornService->setLogger($this->_logger);
 
         $no_session_key = true;
 		if (!empty($servicesCredentials['bullhorn']['BhRestToken']) &&
@@ -124,6 +124,7 @@ class Bullhorn {
                                                      ['fields'=>'id']);
             $response = $httpClient->retrieveResponse($test_uri, '',  [], 'GET');
             $decoded = $this->extract_json($response);
+			$this->var_debug($decoded);
             if (array_key_exists("errorCode", $decoded)) {
                 $this->log_debug("Unable to use previous session key");
             } else {
@@ -196,18 +197,25 @@ class Bullhorn {
 		$this->session_key = $decoded2["BhRestToken"];
         $servicesCredentials['bullhorn']['BhRestToken'] = $decoded2["BhRestToken"];
         $servicesCredentials['bullhorn']['base_url'] = $decoded2["restUrl"];
-		\Storage::put('credentials.json', json_encode($servicesCredentials));
+		//\Storage::put("credentials.json", json_encode($servicesCredentials));
+		file_put_contents(base_path().'/storage/app/credentials.json', json_encode($servicesCredentials));
 		$this->base_url = $decoded2["restUrl"];
 		$this->log_debug("Successfully logged in to Bullhorn");
 	}
 
 	private function authorize($bullhornService, $httpClient, $servicesCredentials) {
 		$uri2 = $bullhornService->getAuthorizationUri();
-		$this->log_debug("Attempting an authorization");
+		$this->log_debug("Attempting a brix authorization");
 		$this->var_debug($uri2);
+		$httpClient->setMaxRedirects(0);
 		$authResponse = $httpClient->retrieveResponse($uri2, '', [], 'GET');
+		$this->log_debug($authResponse);
 		$html_start = strpos($authResponse, '<!DOCTYPE html>');
-		$headers = substr($authResponse, 0, $html_start);
+		$this->log_debug("html start set at ".$html_start);
+		$headers = $authResponse;
+		if ($html_start>2) {
+			$headers = substr($authResponse, 0, $html_start);
+		}
 		$this->log_debug($headers);
 		if (preg_match("|Location: (https?://\S+)|", $headers, $m)) {
 			$this->log_debug("Location: ".$m[1]);
@@ -269,11 +277,12 @@ class Bullhorn {
 		$fieldList = "id,name,username";
 		$find_uri = $bullhornService->getCorpUserByNameUri($this->base_url, $this->session_key, $name, $fieldList);
 		$this->log_debug("Looking for Corporate user ".$name);
-		//$this->var_debug($find_uri);
+		$this->var_debug($find_uri);
 		$client = $this->httpClient;
 		$response = $client->retrieveResponse($find_uri, '', [], 'GET');
 
 		$decoded_user = $this->extract_json($response);
+		$this->log_debug($decoded_user);
 		$cuser = new \Stratum\Model\CorporateUser();
 		if (array_key_exists('data', $decoded_user)) {
 			foreach ($decoded_user['data'] as $u) {
@@ -281,7 +290,7 @@ class Bullhorn {
 			}
 		} else {
 			$this->log_debug("Error Response from Bullhorn:");
-			$this->var_debug($decoded_candidates);
+			$this->var_debug($decoded_user);
 		}
 		return $cuser;
 	}
@@ -292,25 +301,27 @@ class Bullhorn {
 		//return result of query
 
 		$bullhornService = $this->service;
+		if ($user->get("id")) {
 
-		$fieldList = $user->getBullhornFieldList();
-		$this->log_debug("Finding CorporateUser ".$user->get("id"));
-		$this->log_debug($fieldList);
-		$find_uri = $bullhornService->getFindEntityUri("CorporateUser", $this->base_url, $this->session_key, $user->get("id"), $fieldList);
-		$this->log_debug("Looking for user ID ".$user->get("id"));
-		//$this->var_debug($find_uri);
-		$client = $this->httpClient;
-		$response = $client->retrieveResponse($find_uri, '', [], 'GET');
+			$fieldList = $user->getBullhornFieldList();
+			$this->log_debug("Finding CorporateUser ".$user->get("id"));
+			$this->log_debug($fieldList);
+			$find_uri = $bullhornService->getFindEntityUri("CorporateUser", $this->base_url, $this->session_key, $user->get("id"), $fieldList);
+			$this->log_debug("Looking for user ID ".$user->get("id"));
+			//$this->var_debug($find_uri);
+			$client = $this->httpClient;
+			$response = $client->retrieveResponse($find_uri, '', [], 'GET');
 
-		$decoded_user = $this->extract_json($response);
+			$decoded_user = $this->extract_json($response);
 
-		//all fields from Bullhorn saved in $user
-		if (array_key_exists('data', $decoded_user)) {
-			$user->populateFromData($decoded_user['data']);
-			//$user->dump();
-		} else {
-			$this->log_debug("Error Response from Bullhorn:");
-			$this->var_debug($decoded_user);
+			//all fields from Bullhorn saved in $user
+			if (array_key_exists('data', $decoded_user)) {
+				$user->populateFromData($decoded_user['data']);
+				//$user->dump();
+			} else {
+				$this->log_debug("Error Response from Bullhorn:");
+				$this->var_debug($decoded_user);
+			}
 		}
 		return $user;
 	}
@@ -427,9 +438,7 @@ class Bullhorn {
 
 		if (array_key_exists('data', $decoded_cand)) {
 			$candidate->populateFromData($decoded_cand['data']);
-            $this->load_skills($candidate);
-			$this->load_categories($candidate);
-			$this->load_specialties($candidate);
+
 			//$candidate->dump();
 		} else {
 			$this->log_debug("Error Response from Bullhorn:");
@@ -581,103 +590,19 @@ class Bullhorn {
 		$body['candidate']['id'] = $id;
 		$body['candidate']['firstName'] = $candidate->get("firstName");
 		$body['candidate']['lastName'] = $candidate->get("lastName");
-		//$this->var_debug($body);
+		$this->var_debug($body);
 		$subm_ref_url = $this->base_url."entity/CandidateReference";
 		$subm_ref_uri = $this->service->getRestUri($subm_ref_url, $this->session_key);
 		$subm_ref = $this->httpClient->retrieveResponse($subm_ref_uri, json_encode($body), [], 'PUT');
 		$subm_ref_decoded = $this->extract_json($subm_ref);
 		$this->log_debug("Submitted candidate reference: ");
 		$this->var_debug($subm_ref_decoded);
-		return $subm_ref_decoded['changedEntityId'];
-	}
-
-	public function find_skill($skill_name) {
-        $skill_json = \Storage::get("Skills.json");
-        $skill_list = json_decode($skill_json, true)['data'];
-        $skill = new \Stratum\Model\Skill();
-        foreach ($skill_list as $valLabel) {
-            if ($valLabel['label'] == $skill_name) {
-                $skill->set("id", $valLabel['value']);
-                $skill->set("name", $valLabel['label']);
-            }
-        }
-		return $skill;
-	}
-
-	public function find_category($skill_name) {
-		$skill_json = \Storage::get("Categories.json");
-		$skill_list = json_decode($skill_json, true)['data'];
-		$skill = new \Stratum\Model\Skill();
-		foreach ($skill_list as $valLabel) {
-			if ($valLabel['label'] == $skill_name) {
-				$skill->set("id", $valLabel['value']);
-				$skill->set("name", $valLabel['label']);
-			}
+		if (array_key_exists("changedEntityId", $subm_ref_decoded)) {
+			return $subm_ref_decoded['changedEntityId'];
+		} else {
+			return null;
 		}
-		return $skill;
 	}
-
-	public function find_specialty($skill_name) {
-		$skill_name = preg_replace("/–/", "-", $skill_name);
-		$skill_json = \Storage::get("Specialties.json");
-		$skill_list = json_decode($skill_json, true)['data'];
-		$skill = new \Stratum\Model\Skill();
-		foreach ($skill_list as $valLabel) {
-			if ($valLabel['label'] == $skill_name) {
-				$skill->set("id", $valLabel['value']);
-				$skill->set("name", $valLabel['label']);
-			}
-		}
-		return $skill;
-	}
-
-    public function load_skills($candidate) {
-        $skill_string = "";
-        $skill_json = \Storage::get("Skills.json");
-        $full_skill_list = json_decode($skill_json, true)['data'];
-        //check primarySkills to see what's there
-        $skill_ids = $candidate->get("primarySkills");
-        foreach ($skill_ids['data'] as $skill_id) {
-            foreach ($full_skill_list as $valLabel) {
-                if ($skill_id['id'] == $valLabel['value']) {
-                    $skill_string .= $valLabel['label']."\n";
-                }
-            }
-        }
-        $candidate->set("skillID", rtrim($skill_string));
-    }
-
-	public function load_categories($candidate) {
-		$skill_string = "";
-		$skill_json = \Storage::get("Categories.json");
-		$full_skill_list = json_decode($skill_json, true)['data'];
-		//check primarySkills to see what's there
-		$skill_ids = $candidate->get("categories");
-		foreach ($skill_ids['data'] as $skill_id) {
-			foreach ($full_skill_list as $valLabel) {
-				if ($skill_id['id'] == $valLabel['value']) {
-					$skill_string .= $valLabel['label']."\n";
-				}
-			}
-		}
-		$candidate->set("categoryID", rtrim($skill_string));
-	}
-
-	public function load_specialties($candidate) {
-        $skill_string = "";
-        $skill_json = \Storage::get("Specialties.json");
-        $full_skill_list = json_decode($skill_json, true)['data'];
-        //check primarySkills to see what's there
-        $skill_ids = $candidate->get("specialties");
-        foreach ($skill_ids['data'] as $skill_id) {
-            foreach ($full_skill_list as $valLabel) {
-                if ($skill_id['id'] == $valLabel['value']) {
-                    $skill_string .= $valLabel['label']."\n";
-                }
-            }
-        }
-        $candidate->set("specialtyCategoryID", rtrim($skill_string));
-    }
 
 	function delete_custom_object($id, $candidate_id) {
 		//https://rest22.bullhornstaffing.com/rest-services/987up/entity/Candidate/10809/customObject1s/123
@@ -837,36 +762,6 @@ class Bullhorn {
 			return $subm_sk_decoded;
 		}
     }
-
-	public function submit_specialties($candidate) {
-		//https://rest.bullhorn.com/rest-services/e999/entity/Candidate/3084/primarySkills/964,684,253
-		$id = $candidate->get("id");
-		$subm_sk_url = $this->base_url."entity/Candidate/$id/specialties/";
-		$skills = $candidate->get("specialties");
-		$skill_objs = [];
-		//may not be any
-		if ($skills) {
-            $flag = false;
-            foreach ($skills as $skill) {
-				foreach ($skill as $sid=>$val) {
-            		$subm_sk_url .= $val.",";
-            		$flag = true;
-				}
-            }
-			if ($flag) {
-				$subm_sk_url = substr($subm_sk_url, 0, strlen($subm_sk_url)-1); //remove last comma
-				$this->log_debug($subm_sk_url);
-			}
-
-			$subm_sk_uri = $this->service->getRestUri($subm_sk_url, $this->session_key);
-
-			$subm_sk = $this->httpClient->retrieveResponse($subm_sk_uri, '', [], 'PUT');
-			$subm_sk_decoded = $this->extract_json($subm_sk);
-			$this->log_debug("Submitted Specialties: ");
-			$this->var_debug($subm_sk_decoded);
-			return $subm_sk_decoded;
-		}
-	}
 
 	public function submit_files($candidate) {
 		//PUT https://rest.bullhornstaffing.com/rest-services/{corpToken}/file/Candidate/$id/raw?externalID=Portfolio&fileType=SAMPLE

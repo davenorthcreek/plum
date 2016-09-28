@@ -7,14 +7,14 @@ use \Monolog\Logger;
 use \Monolog\Handler\StreamHandler;
 
 class CandidateControllerTest extends \PHPUnit_Framework_TestCase {
-	
+
 	protected $controller;
 	protected $candidate;
 	protected $formResult;
 	protected $log;
-	
+
 	protected function setUp() {
-		$this->log = new Logger('Stratum');
+		$this->log = new Logger('Brix');
 		$this->log->pushHandler(new StreamHandler('src/log/'.date('Y-m-d').'.log', Logger::DEBUG));
 		$this->controller = new \Stratum\Controller\CandidateController();
 		$this->candidate = new \Stratum\Model\Candidate();
@@ -28,13 +28,13 @@ class CandidateControllerTest extends \PHPUnit_Framework_TestCase {
 		$formController->form->setLogger($this->log);
 		$this->candidate = $this->controller->populate($this->candidate, $this->formResult);
 	}
-	
+
 	//public function testGetIdentity() {
 	//	$foundCandidate = $this->controller->getIdentity($this->candidate, $this->formResult);
 	//	$this->assertEquals($foundCandidate->getName(), "D B");
 	//	//$this->assertNotNull($foundCandidate);
 	//}
-	
+
 	public function testPopulate() {
 		$populated = $this->candidate;
 		$populated->dump();
@@ -68,6 +68,6 @@ class CandidateControllerTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals("Yes", $custom->get("text4"), "Would you pass");
 		$json = $populated->marshalToJSON();
 		$this->assertTrue($this->candidate->compare($populated)); //same object so better be true!
-		
+
 	}
 }

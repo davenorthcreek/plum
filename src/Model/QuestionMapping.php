@@ -140,19 +140,14 @@ class QuestionMapping extends ModelObject
     }
 
 
-    public function exportQMToHTML($human, $configs, $qbyq, $candidate, $formResult) {
-        if (in_array($human, ['Q4', 'Q6', 'Q39', 'Q41', 'Q64'])) {
-            return;
-        }
+    public function exportQMToHTML($human, $configs, $candidate, $formResult) {
+
         $form = $this->get('form');
         $questionMaps = $form->get('questionMappings');
         $mult = false;
         $valueMap = [];
         $answermap=null;
         $qanswers = [];
-        if (array_key_exists($human, $qbyq)) {
-            $qanswers = $qbyq[$human]; //an array!
-        }
         $values = [];
         foreach ($qanswers as $q) {
             $qlabel = $q->get("humanQACId");
@@ -187,32 +182,6 @@ class QuestionMapping extends ModelObject
                 }
             }
         }
-        if ($human == "Q109") {
-            $sfp = $candidate->get("customText4");
-            if ($sfp) {
-                $this->log_debug("Q109 loading Suitable Future Positions from Candidate: ");
-                $this->var_debug($sfp);
-                foreach ($sfp as $fp) {
-                    $valueMap[$fp] = 1;
-                }
-            } else {
-                $this->log_debug("Q109 no Suitable Future Positions in Candidate record");
-            }
-        } else if ($human == "Q108") {
-            $this->log_debug("Q108 Looking up category ID for candidate:");
-            $cats = $candidate->get("category");
-            $this->var_debug($cats);
-            if (is_array($cats)) {
-                foreach ($cats as $cid=>$cat) {
-                    $valueMap[$cat] = 1;
-                }
-            }
-            $cats = $candidate->get("categoryID");
-            foreach (explode("\n", $cats) as $cat) {
-                $valueMap[$cat] = 1;
-            }
-            $this->var_debug($valueMap);
-        }
         if (count($valueMap)>1) {
             $mult = true;
         }
@@ -234,9 +203,6 @@ class QuestionMapping extends ModelObject
             }
             if (!$qlabel || !array_key_exists($qlabel, $questionMaps)) {
                 $qlabel = $qanswers[0]->get("humanQuestionId");
-            }
-            if ($human == "Q93") {
-                $this->log_debug("Q Label     : ".$qlabel);
             }
         }
         $answermap = $questionMaps[$qlabel];
@@ -272,7 +238,6 @@ class QuestionMapping extends ModelObject
             //remove trailing yes or no
             $visible = substr($visible, 0, strrpos($visible, ' '));
         }
-        $visible = preg_replace("/Additional Candidate Notes: /", "", $visible);
         //going to put both bullhorn and worldapp in the label
         $label .= "*".$waan."[]";
 
@@ -290,20 +255,7 @@ class QuestionMapping extends ModelObject
             }
             $answermap = $questionMaps[$qlabel];
         }
-        if (strpos($qlabel, 'Q39.A1') === 0 || strpos($qlabel, 'Q41.A1') === 0 || strpos($qlabel, 'Q43') === 0) {
-            echo "<div class='panel panel-info'>\n";
-            if (strpos($qlabel, 'Q39.A1') === 0) {
-                echo "<div class='panel-heading'>Net / Equivalent Gross</div>\n";
-            } else if (strpos($qlabel, 'Q41.A1') === 0) {
-                echo "<div class='panel-heading'>Gross / Equivalent Net</div>\n";
-            } else if (strpos($qlabel, 'Q43') === 0) {
-                echo "<div class='panel-heading'>Daily or Hourly</div>\n";
-            }
-            echo "<div class='panel-body'>\n";
-        }
-        if (strpos($qlabel, 'Q65') === 0) {
-            $visible = "Discipline - for display purposes only, will not be changed in Bullhorn";
-        }
+
         $qlabel = htmlentities($qlabel, ENT_QUOTES);
         $label = htmlentities($label, ENT_QUOTES);
         $visible = htmlentities($visible, ENT_QUOTES);
@@ -476,15 +428,8 @@ class QuestionMapping extends ModelObject
             }
         } else if ($human == "Q18"|| $human == "Q110" || $human == "Q111") {
             echo("<textarea class='form-control' name='$label' rows='4' placeholder='Enter...'>$val</textarea>");
-        } else if ($human == "Q99") {
-            //list of files, not very helpful
-            $file_list = explode("," , $val);
-            $val = "Candidate uploaded ".count($file_list)." files to WorldApp.";
-            echo("\n<label>$val</label>\n");
-            $file_count = 1;
-            foreach ($file_list as $file_url) {
-                echo "<div><a href='$file_url' target='_blank'>File ".$file_count++."</a></div>\n";
-            }
+        } else if ($type == "upload") {
+            echo("<input class='form-control' name='$label' type='file' value='".$val."'>");
         } else {
             echo("<input class='form-control' name='$label' type='text' value='".$val."'>");
         }

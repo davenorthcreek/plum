@@ -7,7 +7,7 @@
     <!-- Sidebar user panel (optional) -->
     <div class="user-panel">
       <div class="pull-left image">
-        <img src="{{ asset("/images/logo.png") }}" class="img-responsive" alt="Stratum Logo">
+        <img src="{{ asset("/images/brick-clay.jpg") }}" class="img-responsive" alt="Brix Logo">
       </div>
       <div class="pull-left info">
         <p>{{{ isset(Auth::user()->name) ? Auth::user()->name : Auth::user()->email }}}</p>

@@ -282,7 +282,7 @@ class FormResult extends ModelObject
 		return $this;
 	}
 
-    public function exportSectionToHTML($form, $section, $qbyq, $candidate) {
+    public function exportSectionToHTML($form, $section, $candidate) {
         $sectionQs=null;
         $questionMaps = $form->get('questionMappings');
         foreach ($section as $qmap) {
@@ -312,29 +312,6 @@ class FormResult extends ModelObject
                 $this->log_debug("default case");
             }
         }
-        if (array_key_exists("Q3", $sectionQs)) {
-            //merge Q3/5/7 into one Nationality widget
-            $q_answers = [];
-            if (array_key_exists("Q3", $qbyq)) {
-                $q_answers = $qbyq["Q3"];
-            }
-            if (array_key_exists("Q5", $qbyq)) {
-                foreach($qbyq["Q5"] as $theq) {
-                    $q_answers[] = $theq;
-                }
-                unset($qbyq["Q5"]);
-            }
-            if (array_key_exists("Q7", $qbyq)) {
-                foreach($qbyq["Q7"] as $theq) {
-                    $q_answers[] = $theq;
-                }
-                unset($qbyq["Q7"]);
-            }
-            $qbyq["Q3"] = $q_answers;
-            unset($sectionQs["Q5"]);
-            unset($sectionQs["Q7"]);
-        }
-
         //store list of 'select all' checkboxes for javascript
         $checkboxes = [];
 
@@ -343,7 +320,7 @@ class FormResult extends ModelObject
                 /****************************************
                 second pass, export to html with answers
                 ************************************** */
-            $retval = $qmap->exportQMToHTML($human, $this->get("configs"), $qbyq, $candidate, $this);
+            $retval = $qmap->exportQMToHTML($human, $this->get("configs"), $candidate, $this);
             if ($retval) {
                 $checkboxes[] = $retval;
             }

@@ -25,6 +25,41 @@ use \Log;
 
 class BullhornService extends AbstractService
 {
+
+    //allow someone to pass in a $logger
+    protected $_logger;
+
+    public function setLogger($lgr) {
+        //$lgr better be a logger of some sort -missing real OOP here
+        $this->_logger = $lgr;
+    }
+
+    function var_debug($object=null) {
+        ob_start();                    // start buffer capture
+        var_dump( $object );           // dump the values
+        $contents = ob_get_contents(); // put the buffer into a variable
+        ob_end_clean();                // end capture
+        $this->log_debug( $contents ); // log contents of the result of var_dump( $object )
+    }
+
+
+    protected function log_debug($str) {
+        if (!is_null($this->_logger)) {
+            $e = debug_backtrace(true, 2);
+            //$this->_logger->debug(var_dump($e[0]));
+            $result = date("Ymd H:i:s");
+            $result .= ":";
+            $result .= $e[1]["line"];
+            $result .= ":";
+            $result .= $e[1]['function'];
+            $result .= ': '.$str;
+            $this->_logger->debug($result);
+        } else {  //no logger configured
+            \Log::debug($str);
+        }
+    }
+
+
     public function __construct(
         CredentialsInterface $credentials,
         ClientInterface $httpClient,
@@ -47,7 +82,7 @@ class BullhornService extends AbstractService
 				'code'			=> $code,
                 'client_id'     => $this->credentials->getConsumerId(),
                 'client_secret' => $this->credentials->getConsumerSecret(),
-                'redirect_uri'	=> 'http://www.bullhorn.com',
+                //'redirect_uri'	=> 'http://www.bullhorn.com',
                 'grant_type' 	=> 'authorization_code'
             )
         );
@@ -97,9 +132,9 @@ class BullhornService extends AbstractService
     public function getAuthorizationUri(array $additionalParameters = array())
     {
 		$directory = __DIR__;
-		\Log::debug( "Currently at ".$directory);
+		$this->log_debug( "Currently at ".$directory);
 		$newdir = preg_replace("|\/src\/OAuth\/OAuth2\/Service|", "", $directory);
-		\Log::debug("Now at ".$newdir);
+		$this->log_debug("Now at ".$newdir);
 
 		$dotEnv = new Dotenv($newdir);
 		$dotEnv->load();
@@ -111,7 +146,7 @@ class BullhornService extends AbstractService
             array(
                 'client_id'     => $this->credentials->getConsumerId(),
                 'response_type'	=> 'code',
-                'redirect_uri'	=> 'http://www.bullhorn.com',
+                //'redirect_uri'	=> 'http://www.bullhorn.com',
                 'username'		=> $username,
                 'password'      => $password,
                 'action'		=> 'Login'
@@ -248,7 +283,7 @@ class BullhornService extends AbstractService
     }
 
     public function getFindUri($base_url, $session_key, $id, $fieldList) {
-      Log::debug("Session Key: ".$session_key);
+        $this->log_debug("Session Key: ".$session_key);
 		return $this->getFindEntityUri("Candidate", $base_url, $session_key, $id, $fieldList);
 	}
 

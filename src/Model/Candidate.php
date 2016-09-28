@@ -473,7 +473,7 @@ class Candidate extends ModelObject
 					$value = $m[1];
 				}
 			}
-			if (preg_match("/date/", $attr) && $value) {
+			if (preg_match("/date/i", $attr) && $value) {
 				//need to convert to Unix timestamp
                 $this->log_debug("$attr: ".$value);
 				$date = \DateTime::createFromFormat("d/m/Y", $value);
@@ -539,13 +539,7 @@ class Candidate extends ModelObject
             $jsonAddr1 = $addr1->marshalToJSON();
             $json["address"] = json_decode($jsonAddr1, true);
         }
-        $addr2 = $this->get("secondaryAddress");
-        if (is_array($addr2)) {
-            //ignore for now
-        } else if ($addr2 && is_a($addr2, "\Stratum\Model\Address")) {
-            $jsonAddr2 = $addr2->marshalToJSON();
-            $json["secondaryAddress"] = json_decode($jsonAddr2, true);
-        }
+
 		/*
 		 *
 		 * This section would continually add new custom objects
@@ -609,22 +603,10 @@ class Candidate extends ModelObject
         echo "\n<th><label>Value</label></th>\n";
         echo "\n</tr></thead>";
         echo "\n<tbody>";
-        $summary = ["id", "firstName", "lastName", "email", "email2", "mobile", "phone", "workPhone", "fax3", "pager", "customTextBlock2"];
+        $summary = ["id", "firstName", "lastName", "email", "mobile", "phone", "customTextBlock3", "customText18", "customText19", "skillSet", "certifications"];
         foreach ($summary as $item) {
             $value = '';
-            if ($item=="customTextBlock2") {
-                $types = $this->get($item);
-                $this->log_debug("At Discipline, types is");
-                $this->var_debug($types);
-                if (is_array($types)) {
-                    foreach ($types as $t) {
-                        $value .= $t.";";
-                    }
-                    $value = substr($value, 0, strlen($value)-1); //remove last semi-colon
-                } else {
-                    $value = $types;
-                }
-            } else if ($item == "dateOfBirth") {
+            if ($item == "dateOfBirth") {
                 $dob = $this->get("dateOfBirth");
                 if (is_numeric($dob)) {
                     $value = $this->getDateOfBirthWithFormat("d/m/Y");
@@ -637,6 +619,12 @@ class Candidate extends ModelObject
             //we have value
             $wa = $this->getWorldAppLabel($item, $form);
             //we have human-readable label
+            $this->log_debug("$wa:");
+            $this->var_debug($value);
+            if (is_array($value)) {
+                $value2 = implode(", ", $value);
+                $value = $value2;
+            }
             //let's display this!
             echo "\n<tr>";
             //echo "\n<div class='form-group'>";
